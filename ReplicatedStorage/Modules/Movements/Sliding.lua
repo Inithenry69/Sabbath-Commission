@@ -3,158 +3,146 @@
 
 local Sliding = {}
 
---// Services
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Debris = game:GetService("Debris")
 
---// Players Stuff
-local Plr = game.Players.LocalPlayer
-local Char = Plr.Character
-local RootPart = Char:FindFirstChild("HumanoidRootPart")
-local Humanoid = Char:FindFirstChildOfClass("Humanoid")
-local SlideAnim = Humanoid:LoadAnimation(game.ReplicatedStorage.Animations.Movements.Slide)
+local run_service = game:GetService("RunService")
+local debris = game:GetService("Debris")
 
---// Varaibles
-local isSliding = false
-local CanSlide = true
-local PosCheck
-local CurrentMultiplier = 1
 
---// Objects
-local SlideVelocity
-local AlignGyro
+local player = game.Players.LocalPlayer
+local character = player.Character
+local humanoid_root_part = character:FindFirstChild("HumanoidRootPart")
+local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+local slide_anim = humanoid:LoadAnimation(game.ReplicatedStorage.Animations.Movements.Slide)
+
+
+local is_sliding = false
+local can_slide = true
+local pos_check
+local current_multiplier = 1
+
+
+local slide_velocity
+local align_gyro
 
 local Settings = {
 
-	Cooldown = 0.1,
-	BaseSpeed = 35,
-	HipHeight = {
-		Normal = 0,
-		Slide = -2,
+	cooldown = 0.1,
+	base_speed = 35,
+	hip_height = {
+		normal = 0,
+		slide = -2,
 	},
-	MaxMultiplier = 2,
-	SpeedChangeRate = {
-		Forward = 1,
-		Upward = 2,
-		Downward = 1
+	max_multiplier = 2,
+	speed_change_rate = {
+		forward = 1,
+		upward = 2,
+		downward = 1
 	},
-	PushOnCancel = false,
-	PushVelocity = {
-		Forward = 50,
-		Up = 50,
+	push_velocity = {
+		forward = 50,
+		up = 50,
 	},
 
 }
 
-local Params = RaycastParams.new()
-Params.FilterDescendantsInstances = {Char}
-Params.FilterType = Enum.RaycastFilterType.Exclude
+local params = RaycastParams.new()
+params.FilterDescendantsInstances = { character }
+params.FilterType = Enum.RaycastFilterType.Exclude
 
 function Sliding.StopSlide()
 
-	isSliding = false
+	is_sliding = false
 
-	PosCheck:Disconnect()
+	pos_check:Disconnect()
 
-	SlideVelocity:Destroy()
-	AlignGyro:Destroy()
-	SlideAnim:Stop(0.15)
+	slide_velocity:Destroy()
+	align_gyro:Destroy()
+	slide_anim:Stop(0.15)
 
-	Humanoid.HipHeight = Settings.HipHeight.Normal
+	humanoid.HipHeight = Settings.hip_height.normal
 
-	task.delay(Settings.Cooldown,function()
-		CanSlide = true
+	task.delay(Settings.cooldown,function()
+		can_slide = true
 	end)
 
 
-	local CancelMultiplier = CurrentMultiplier
-	
-	if Settings.PushOnCancel == true then
-
-		local PushVelocity = Instance.new("BodyVelocity",RootPart)
-		PushVelocity.MaxForce = Vector3.new(40000,40000,40000)
-		PushVelocity.Velocity = (RootPart.CFrame.LookVector * (Settings.PushVelocity.Forward * CancelMultiplier)) + (RootPart.CFrame.UpVector * Settings.PushVelocity.Up)
-		Debris:AddItem(PushVelocity,0.1)
-
-	end
-	
 end
 
 function Sliding.Slide()
 	
 	--// Cast a ray down to check if player's grounded or no
-	local RayDirection = -RootPart.CFrame.UpVector * 5
-	local GroundRay = workspace:Raycast(RootPart.Position, RayDirection, Params)
+	local ray_direction = -humanoid_root_part.CFrame.UpVector * 5
+	local ground_ray = workspace:Raycast(humanoid_root_part.Position, ray_direction, params)
 
-	if isSliding or not CanSlide or not GroundRay then return end
+	if is_sliding or not can_slide or not ground_ray then return end
 
-	isSliding = true
-	CanSlide = false
-	SlideAnim:Play(0.15)
+	is_sliding = true
+	can_slide = false
+	slide_anim:Play(0.15)
 
-	Humanoid.HipHeight = Settings.HipHeight.Slide
+	humanoid.HipHeight = Settings.hip_height.slide
 
-	SlideVelocity = Instance.new("BodyVelocity",RootPart)
-	SlideVelocity.MaxForce = Vector3.new(40000,0,40000)
-	SlideVelocity.Velocity = RootPart.CFrame.LookVector * Settings.BaseSpeed
+	slide_velocity = Instance.new("BodyVelocity", humanoid_root_part)
+	slide_velocity.MaxForce = Vector3.new(40000,0,40000)
+	slide_velocity.Velocity = humanoid_root_part.CFrame.LookVector * Settings.base_speed
 
-	AlignGyro = Instance.new("BodyGyro",RootPart)
-	AlignGyro.MaxTorque = Vector3.new(3e5,3e5,3e5)
-	AlignGyro.P = 10000
+	align_gyro = Instance.new("BodyGyro", humanoid_root_part)
+	align_gyro.MaxTorque = Vector3.new(3e5,3e5,3e5)
+	align_gyro.P = 10000
 
-	local PreviousY = 0
-	CurrentMultiplier = 1
+	local previous_y = 0
+	current_multiplier = 1
 
-	PosCheck = RunService.Heartbeat:Connect(function(deltaTime)
+	pos_check = run_service.Heartbeat:Connect(function(delta_time)
 
-		local CurrentY = RootPart.Position.Y
-		local VerticalChange = (CurrentY - PreviousY)
-		PreviousY = CurrentY
+		local current_y = humanoid_root_part.Position.Y
+		local vertical_change = (current_y - previous_y)
+		previous_y = current_y
 
-		local RayDirection = -RootPart.CFrame.UpVector * 10
-		local GroundRay = workspace:Raycast(RootPart.Position, RayDirection, Params)
+		local ray_direction = -humanoid_root_part.CFrame.UpVector * 10
+		local ground_ray = workspace:Raycast(humanoid_root_part.Position, ray_direction, params)
 
 		--// Align Character to the slope
-		if GroundRay then
+		if ground_ray then
 
-			local CurrentRightVector = RootPart.CFrame.RightVector
-			local UpVector = GroundRay.Normal
-			local NewFacialVector = CurrentRightVector:Cross(UpVector)
-			AlignGyro.CFrame = CFrame.fromMatrix(RootPart.Position, CurrentRightVector, UpVector, NewFacialVector)
+			local current_right_vector = humanoid_root_part.CFrame.RightVector
+			local up_vector = ground_ray.Normal
+			local new_facial_vector = current_right_vector:Cross(up_vector)
+			align_gyro.CFrame = CFrame.fromMatrix(humanoid_root_part.Position, current_right_vector, up_vector, new_facial_vector)
 
 		end
 
-		SlideVelocity.Velocity = RootPart.CFrame.LookVector * (Settings.BaseSpeed * CurrentMultiplier)
+		slide_velocity.Velocity = humanoid_root_part.CFrame.LookVector * (Settings.base_speed * current_multiplier)
 
-		if VerticalChange < 0.1 and VerticalChange > -0.1 then -- Slide Forward (decrease speed until 0)
+		if vertical_change < 0.1 and vertical_change > -0.1 then -- Slide Forward (decrease speed until 0)
 
-			if CurrentMultiplier > 1 then -- If too fast speed rate will multiply and speed will drop fastur!
+			if current_multiplier > 1 then -- If too fast speed rate will multiply and speed will drop fastur!
 
-				CurrentMultiplier = math.clamp(CurrentMultiplier - (Settings.SpeedChangeRate.Forward * 2) * deltaTime, 0, Settings.MaxMultiplier)
+				current_multiplier = math.clamp(current_multiplier - (Settings.speed_change_rate.forward * 2) * delta_time, 0, Settings.max_multiplier)
 
 			end
 
 
-			CurrentMultiplier = math.clamp(CurrentMultiplier - Settings.SpeedChangeRate.Forward * deltaTime, 0, Settings.MaxMultiplier)
+			current_multiplier = math.clamp(current_multiplier - Settings.speed_change_rate.forward * delta_time, 0, Settings.max_multiplier)
 
-		elseif VerticalChange > 0 then -- Slide Up (decrease speed until 0)
+		elseif vertical_change > 0 then -- Slide Up (decrease speed until 0)
 
-			if CurrentMultiplier > 1 then -- If too fast speed rate will multiply and speed will drop fastur!
-				CurrentMultiplier = math.clamp(CurrentMultiplier - (Settings.SpeedChangeRate.Upward * 2) * deltaTime, 0, Settings.MaxMultiplier)
+			if current_multiplier > 1 then -- If too fast speed rate will multiply and speed will drop fastur!
+				current_multiplier = math.clamp(current_multiplier - (Settings.speed_change_rate.upward * 2) * delta_time, 0, Settings.max_multiplier)
 			end
 
-			CurrentMultiplier = math.clamp(CurrentMultiplier - Settings.SpeedChangeRate.Upward * deltaTime, 0, Settings.MaxMultiplier)
+			current_multiplier = math.clamp(current_multiplier - Settings.speed_change_rate.upward * delta_time, 0, Settings.max_multiplier)
 
 		else -- Slide Down (Add up speed until max)
 
-			CurrentMultiplier = math.clamp(CurrentMultiplier + Settings.SpeedChangeRate.Downward * deltaTime, 0, Settings.MaxMultiplier)
+			current_multiplier = math.clamp(current_multiplier + Settings.speed_change_rate.downward * delta_time, 0, Settings.max_multiplier)
 
 		end
 
-		CurrentMultiplier = math.clamp(CurrentMultiplier,0,Settings.MaxMultiplier)
+		current_multiplier = math.clamp(current_multiplier, 0, Settings.max_multiplier)
 
-		if CurrentMultiplier < 0.1 or not GroundRay then
+		if current_multiplier < 0.1 or not ground_ray then
 
 			Sliding.StopSlide()
 
